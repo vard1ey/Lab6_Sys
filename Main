@@ -1,0 +1,19 @@
+public class Main {
+    public static void main(String[] args) throws Exception {
+        Copy.createTestFile();
+
+        long syncTime = Copy.synchroneCopy();
+        long parallelTime = Copy.parallelCopy();
+
+        System.out.println("Результаты производительности:");
+        System.out.println("Синхронное копирование:  " + syncTime / 1_000 + " мкс");
+        System.out.println("Параллельное копирование: " + parallelTime / 1_000 + " мкс");
+        if(syncTime / 1_000 >= parallelTime / 1_000){
+            System.out.println("Параллельное быстрее/равно Синхронному");
+        }
+        else{
+            System.out.println("Синхронное быстрее");
+        }
+        System.out.println("Разница: " + (syncTime - parallelTime) / 1_000 + " мкс");
+    }
+}
