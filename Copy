@@ -1,0 +1,89 @@
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+
+public class Copy {
+    private static final int BUFFER_SIZE = 4096;
+
+    public static long synchroneCopy() throws IOException {
+        long startTime = System.nanoTime();
+
+        Path shmeguli = Paths.get("shmeguli.txt");
+        Path shmeguli1 = Paths.get("shmeguli_sync1.txt");
+        Path shmeguli2 = Paths.get("shmeguli_sync2.txt");
+
+        copyWithBuffer(shmeguli, shmeguli1);
+        copyWithBuffer(shmeguli, shmeguli2);
+
+        long time = System.nanoTime() - startTime;
+        System.out.println("Файлы скопированы синхронно с буфером");
+        return time;
+    }
+
+    public static long parallelCopy() throws InterruptedException {
+        long startTime = System.nanoTime();
+
+        Thread thread1 = new Thread(() -> {
+            try {
+                copyWithBuffer(Paths.get("shmeguli.txt"),
+                        Paths.get("shmeguli_thread1.txt"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        Thread thread2 = new Thread(() -> {
+            try {
+                copyWithBuffer(Paths.get("shmeguli.txt"),
+                        Paths.get("shmeguli_thread2.txt"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        thread1.start();
+        thread2.start();
+
+        thread1.join();
+        thread2.join();
+
+        long time = System.nanoTime() - startTime;
+        System.out.println("Файлы скопированы параллельно с буфером");
+        return time;
+    }
+
+    private static void copyWithBuffer(Path source, Path target) throws IOException {
+        try (FileChannel inChannel = FileChannel.open(source, StandardOpenOption.READ);
+             FileChannel outChannel = FileChannel.open(target,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.WRITE,
+                     StandardOpenOption.TRUNCATE_EXISTING)) {
+
+            ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+
+            while (inChannel.read(buffer) != -1) {
+                buffer.flip();
+                outChannel.write(buffer);
+                buffer.clear();
+            }
+        }
+    }
+
+    public static void createTestFile() throws IOException {
+        StringBuilder content = new StringBuilder();
+
+        for (int i = 0; i < 10_000; i++) {
+            content.append("Строка ").append(i)
+                    .append(": шмегулёк\n");
+        }
+
+        Files.writeString(Paths.get("shmeguli.txt"), content.toString());
+        System.out.println("Тестовый файл создан");
+        System.out.println("Размер shmeguli.txt: " + Files.size(Paths.get("shmeguli.txt")) + " байт");
+    }
+}
